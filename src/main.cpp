@@ -70,7 +70,7 @@ int main() {
 
   // MPC is initialized here!
   MPC mpc;
-
+  
   h.onMessage([&mpc](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length,
                      uWS::OpCode opCode) {
     // "42" at the start of the message means there's a websocket message event.
@@ -87,20 +87,38 @@ int main() {
           // j[1] is the data JSON object
           vector<double> ptsx = j[1]["ptsx"];
           vector<double> ptsy = j[1]["ptsy"];
+
+          int xxx;
+          cin >> xxx;
+          
+          //VectorXd ptsx_v << ptsx;
+          //VectorXd ptsy_v << ptsy;
           double px = j[1]["x"];
           double py = j[1]["y"];
           double psi = j[1]["psi"];
           double v = j[1]["speed"];
-
+          
+          //auto coeffs = polyfit(ptsx_v, ptsy_v, 3);
+          //double cte = polyeval(coeffs, x) - y;
+          //double epsi - psi - atan(coeffs[1]);
+          Eigen::VectorXd state(6);
+          //state << px, py, psi, v, cte, epsi;
+          double steer_value = 0;
+          double throttle_value =0.3;
+          
           /*
           * TODO: Calculate steering angle and throttle using MPC.
           *
           * Both are in between [-1, 1].
           *
           */
-          double steer_value;
-          double throttle_value;
-
+          /*
+          vector<double> result = mpc.Solve(state, coeffs);
+          
+          double steer_value = result[4];
+          double throttle_value = result[5];
+          cout << steer_value << " " << throttle_value << endl;
+           */
           json msgJson;
           // NOTE: Remember to divide by deg2rad(25) before you send the steering value back.
           // Otherwise the values will be in between [-deg2rad(25), deg2rad(25] instead of [-1, 1].
