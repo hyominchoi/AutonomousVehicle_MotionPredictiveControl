@@ -31,6 +31,21 @@ string hasData(string s) {
   }
   return "";
 }
+// coordinate struct
+struct coordT {
+  double x;
+  double y;
+};
+// Global to vehicle coordinates
+coordT GlobalToVehicleCoor(double ptx, double pty,
+                           double vx, double vy, double psi) {
+  coordT new_coord;
+  //new x-coordniates of the point
+  new_coord.x =  (ptx-vx) * cos(psi) + (pty - vy) * sin(psi);
+  new_coord.y = -(ptx-vx) * sin(psi) + (pty - vy) * cos(psi);
+  
+  return new_coord;
+}
 
 // Evaluate a polynomial.
 double polyeval(Eigen::VectorXd coeffs, double x) {
@@ -87,24 +102,37 @@ int main() {
           // j[1] is the data JSON object
           vector<double> ptsx = j[1]["ptsx"];
           vector<double> ptsy = j[1]["ptsy"];
-
-          int xxx;
-          cin >> xxx;
-          
-          //VectorXd ptsx_v << ptsx;
-          //VectorXd ptsy_v << ptsy;
           double px = j[1]["x"];
           double py = j[1]["y"];
           double psi = j[1]["psi"];
           double v = j[1]["speed"];
           
-          //auto coeffs = polyfit(ptsx_v, ptsy_v, 3);
-          //double cte = polyeval(coeffs, x) - y;
-          //double epsi - psi - atan(coeffs[1]);
+          /*
+          
+          Eigen::VectorXd ptsx_vector(6);
+          Eigen::VectorXd ptsy_vector(6);
+          ptsx_vector << ptsx[0], ptsx[1], ptsx[2], ptsx[3], ptsx[4], ptsx[5];
+          ptsy_vector << ptsy[0], ptsy[1], ptsy[2], ptsy[3], ptsy[4], ptsy[5];
+          auto coeffs = polyfit(ptsx_vector, ptsy_vector, 3);
+          */
+          
+          
+          Eigen::VectorXd ptsx_vehicle(6);
+          Eigen::VectorXd ptsy_vehicle(6);
+          for (int i = 0; i < ptsx.size(); ++i) {
+            coordT p = GlobalToVehicleCoor(ptsx[i], ptsy[i], px, py, psi);
+            ptsx_vehicle(i) = (p.x);
+            ptsy_vehicle(i) = (p.y);
+          }
+          //cout << ptsx_vehicle << endl;
+          
+          auto coeffs = polyfit(ptsx_vehicle, ptsy_vehicle, 3);
+          double cte = polyeval(coeffs, 0.);
+          double epsi = -atan(coeffs[1]);
           Eigen::VectorXd state(6);
-          //state << px, py, psi, v, cte, epsi;
-          double steer_value = 0;
-          double throttle_value =0.3;
+          state << 0., 0., 0., v, cte, epsi;
+          cout << state << endl;
+          
           
           /*
           * TODO: Calculate steering angle and throttle using MPC.
@@ -112,13 +140,16 @@ int main() {
           * Both are in between [-1, 1].
           *
           */
-          /*
+          
           vector<double> result = mpc.Solve(state, coeffs);
           
+          //double steer_value = result[4];
           double steer_value = result[4];
           double throttle_value = result[5];
+          int xx;
+          cin >> xx;
           cout << steer_value << " " << throttle_value << endl;
-           */
+           
           json msgJson;
           // NOTE: Remember to divide by deg2rad(25) before you send the steering value back.
           // Otherwise the values will be in between [-deg2rad(25), deg2rad(25] instead of [-1, 1].
@@ -126,8 +157,8 @@ int main() {
           msgJson["throttle"] = throttle_value;
 
           //Display the MPC predicted trajectory 
-          vector<double> mpc_x_vals;
-          vector<double> mpc_y_vals;
+          vector<double> mpc_x_vals = mpc.mpc_x;
+          vector<double> mpc_y_vals = mpc.mpc_y;
 
           //.. add (x,y) points to list here, points are in reference to the vehicle's coordinate system
           // the points in the simulator are connected by a Green line
@@ -140,8 +171,19 @@ int main() {
           vector<double> next_y_vals;
 
           //.. add (x,y) points to list here, points are in reference to the vehicle's coordinate system
+          // vector<double> ptsy_eval;
+          for (int i = 0; i <ptsx.size(); ++i){
+            double y_eval = polyeval(coeffs, ptsx_vehicle(i));
+            
+            next_x_vals.push_back(ptsx_vehicle(i));
+            next_y_vals.push_back(y_eval);
+          }
+          
+          
+          
           // the points in the simulator are connected by a Yellow line
 
+          
           msgJson["next_x"] = next_x_vals;
           msgJson["next_y"] = next_y_vals;
 

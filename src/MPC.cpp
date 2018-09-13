@@ -6,8 +6,8 @@
 using CppAD::AD;
 
 // TODO: Set the timestep length and duration
-size_t N = 25;
-double dt = 0.05;
+size_t N = 5;
+double dt = 0.1;
 
 // This value assumes the model presented in the classroom is used.
 //
@@ -254,7 +254,14 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
   // Cost
   auto cost = solution.obj_value;
   std::cout << "Cost " << cost << std::endl;
-
+  
+  mpc_x = {};
+  mpc_y = {};
+  for (int i = 0; i < N; ++i) {
+    mpc_x.push_back(solution.x[x_start+1+i]);
+    mpc_y.push_back(solution.x[y_start+1+i]);
+    
+  }
   // TODO: Return the first actuator values. The variables can be accessed with
   // `solution.x[i]`.
   //
