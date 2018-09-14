@@ -107,16 +107,6 @@ int main() {
           double psi = j[1]["psi"];
           double v = j[1]["speed"];
           
-          /*
-          
-          Eigen::VectorXd ptsx_vector(6);
-          Eigen::VectorXd ptsy_vector(6);
-          ptsx_vector << ptsx[0], ptsx[1], ptsx[2], ptsx[3], ptsx[4], ptsx[5];
-          ptsy_vector << ptsy[0], ptsy[1], ptsy[2], ptsy[3], ptsy[4], ptsy[5];
-          auto coeffs = polyfit(ptsx_vector, ptsy_vector, 3);
-          */
-          
-          
           Eigen::VectorXd ptsx_vehicle(6);
           Eigen::VectorXd ptsy_vehicle(6);
           for (int i = 0; i < ptsx.size(); ++i) {
@@ -124,15 +114,12 @@ int main() {
             ptsx_vehicle(i) = (p.x);
             ptsy_vehicle(i) = (p.y);
           }
-          //cout << ptsx_vehicle << endl;
           
           auto coeffs = polyfit(ptsx_vehicle, ptsy_vehicle, 3);
           double cte = polyeval(coeffs, 0.);
           double epsi = -atan(coeffs[1]);
           Eigen::VectorXd state(6);
           state << 0., 0., 0., v, cte, epsi;
-          cout << state << endl;
-          
           
           /*
           * TODO: Calculate steering angle and throttle using MPC.
@@ -144,11 +131,9 @@ int main() {
           vector<double> result = mpc.Solve(state, coeffs);
           
           //double steer_value = result[4];
-          double steer_value = result[4];
-          double throttle_value = result[5];
-          int xx;
-          cin >> xx;
-          cout << steer_value << " " << throttle_value << endl;
+          double steer_value = result[6];
+          double throttle_value = result[7];
+          cout << "steer_value" << steer_value << " " << throttle_value << endl;
            
           json msgJson;
           // NOTE: Remember to divide by deg2rad(25) before you send the steering value back.
@@ -178,15 +163,10 @@ int main() {
             next_x_vals.push_back(ptsx_vehicle(i));
             next_y_vals.push_back(y_eval);
           }
-          
-          
-          
+  
           // the points in the simulator are connected by a Yellow line
-
-          
           msgJson["next_x"] = next_x_vals;
           msgJson["next_y"] = next_y_vals;
-
 
           auto msg = "42[\"steer\"," + msgJson.dump() + "]";
           std::cout << msg << std::endl;
