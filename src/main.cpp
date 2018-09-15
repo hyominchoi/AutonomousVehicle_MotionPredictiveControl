@@ -121,6 +121,8 @@ int main() {
           Eigen::VectorXd state(6);
           state << 0., 0., 0., v, cte, epsi;
           
+
+          
           /*
           * TODO: Calculate steering angle and throttle using MPC.
           *
@@ -169,7 +171,8 @@ int main() {
           msgJson["next_y"] = next_y_vals;
 
           auto msg = "42[\"steer\"," + msgJson.dump() + "]";
-          std::cout << msg << std::endl;
+          // std::cout << msg << std::endl;
+          
           // Latency
           // The purpose is to mimic real driving conditions where
           // the car does actuate the commands instantly.

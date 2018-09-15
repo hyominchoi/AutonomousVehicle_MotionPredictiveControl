@@ -19,6 +19,7 @@ class MPC {
   // predicted trajectory by the method Solve in vehicle coordinates
   vector<double> mpc_x;
   vector<double> mpc_y;
+  double ref_v;
   
 };
 

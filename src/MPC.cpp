@@ -2,6 +2,7 @@
 #include <cppad/cppad.hpp>
 #include <cppad/ipopt/solve.hpp>
 #include "Eigen-3.3/Eigen/Core"
+#include <algorithm>
 
 using CppAD::AD;
 
@@ -23,7 +24,7 @@ const double Lf = 2.67;
 
 // Both the reference cross track and orientation errors are 0.
 // The reference velocity is set to 40 mph.
-double ref_v = 40;
+
 
 // The solver takes all the state variables and actuator
 // variables in a singular vector. Thus, we should to establish
@@ -41,8 +42,11 @@ class FG_eval {
  public:
   // Fitted polynomial coefficients
   Eigen::VectorXd coeffs;
-  FG_eval(Eigen::VectorXd coeffs) { this->coeffs = coeffs; }
-
+  double ref_v;
+  FG_eval(Eigen::VectorXd coeffs, double ref_v) {
+    this->coeffs = coeffs;
+    this->ref_v = ref_v; }
+  
   typedef CPPAD_TESTVECTOR(AD<double>) ADvector;
   void operator()(ADvector& fg, const ADvector& vars) {
     // TODO: implement MPC
@@ -52,35 +56,25 @@ class FG_eval {
     
     // The part of the cost based on the reference state.
     for (int t = 0; t < N; t++) {
-      fg[0] += (50) * CppAD::pow(vars[cte_start + t], 2);
-      fg[0] += (50) * CppAD::pow(vars[epsi_start + t], 2);
+      fg[0] += CppAD::pow(vars[cte_start + t], 2);
+      fg[0] += CppAD::pow(vars[epsi_start + t], 2);
       
     }
     
     // Minimize the use of actuators.
     for (int t = 0; t < N - 1; t++) {
-      fg[0] += 10. * CppAD::pow(vars[delta_start + t], 2);
+      fg[0] += CppAD::pow(vars[delta_start + t], 2);
       fg[0] += CppAD::pow(vars[a_start + t], 2);
     }
     
-    // deccelerate when |delta| > 1 degree, or 0.0174 radians
     for (int t = 0; t < N - 1; t++) {
-      if (abs(vars[delta_start]) > 0.0174 ||
-          abs(vars[cte_start]) > 1 ||
-          abs(vars[epsi_start - 1]) > 1) {
-        fg[0] += 100 * CppAD::pow(vars[v_start + t] - 25, 2);
-        // fg[0] += 10 * vars[a_start + t];
-      }
-      else fg[0] += CppAD::pow(vars[v_start + t] - 40, 2);
-      
-    }
-    
-      
+      fg[0] += CppAD::pow(vars[v_start + t] - ref_v, 2);
+     }
     
     // Minimize the value gap between sequential actuations.
     for (int t = 0; t < N - 2; t++) {
-      fg[0] += 100 * CppAD::pow(vars[delta_start + t + 1] - vars[delta_start + t], 2);
-      fg[0] += 0.1 * CppAD::pow(vars[a_start + t + 1] - vars[a_start + t], 2);
+      fg[0] += 500.* CppAD::pow(vars[delta_start + t + 1] - vars[delta_start + t], 2);
+      fg[0] += CppAD::pow(vars[a_start + t + 1] - vars[a_start + t], 2);
     }
 
     // Initial constraints
@@ -145,7 +139,7 @@ class FG_eval {
 //
 // MPC class definition implementation.
 //
-MPC::MPC() {}
+MPC::MPC() {ref_v = 40;}
 MPC::~MPC() {}
 
 vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
@@ -207,8 +201,8 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
   // Acceleration/decceleration upper and lower limits.
   // NOTE: Feel free to change this to something else.
   for (int i = a_start; i < n_vars; i++) {
-    vars_lowerbound[i] = -.5;
-    vars_upperbound[i] = .5;
+    vars_lowerbound[i] = -1;
+    vars_upperbound[i] = 1;
   }
 
   // Lower and upper limits for the constraints
@@ -233,8 +227,27 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
   constraints_upperbound[cte_start] = cte;
   constraints_upperbound[epsi_start] = epsi;
   
+  //Compute radius of curvature at the next point
+  double x_curvature = 10;
+  double numerator = (coeffs[1] + 2 * coeffs[2] * x_curvature + 3 * coeffs[3] * x_curvature * x_curvature);
+  numerator = numerator * numerator;
+  numerator += 1;
+  double denominator = max(abs(2 * coeffs[2] + 6 * coeffs[3] * x_curvature), 0.000001);
+  double r_k = numerator / denominator;
+  
+  if (abs(r_k) < 70) {
+    this->ref_v = 20;
+  }
+  
+  else if (abs(r_k) < 100) {
+    this->ref_v = 30;
+  }
+  
+  else this->ref_v = 40;
+  cout << "r_k" << r_k << "ref_v " << ref_v << "coeffs"<<
+  coeffs[0] << " " << coeffs[1] <<" "<< coeffs[2] << " "<< coeffs[3] << endl ;
   // object that computes objective and constraints
-  FG_eval fg_eval(coeffs);
+  FG_eval fg_eval(coeffs, this->ref_v);
 
   //
   // NOTE: You don't have to worry about these options
@@ -281,8 +294,9 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
   //
   // {...} is shorthand for creating a vector, so auto x1 = {1.0,2.0}
   // creates a 2 element double vector.
+  cout << "solution x delta +2" << -solution.x[delta_start + 2] << endl;
   return {solution.x[x_start + 1],   solution.x[y_start + 1],
     solution.x[psi_start + 1], solution.x[v_start + 1],
     solution.x[cte_start + 1], solution.x[epsi_start + 1],
-    -solution.x[delta_start + 1],   solution.x[a_start + 1]};
+    -solution.x[delta_start + 2],   solution.x[a_start + 2]};
 }
