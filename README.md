@@ -1,5 +1,28 @@
 # CarND-Controls-MPC
-Self-Driving Car Engineer Nanodegree Program
+Implement a Motion Predictive Controller in C++ to maneuver the vehicle around the track on simulator provided by Udacity Self-Driving Car Engineering Nanodegree Program. 
+------
+
+## Reflection
+
+I, @hyominchoi, changed and wrote source codes (src/main.cpp, MPC.h, MPC.cpp) provided by Udacity.
+
+### Notes on source code
+Student describes their model in detail. This includes the state, actuators and update equations.
+  * The Model: 
+  1. state vector consists of vehicle's x, y, psi, cte, epsi
+  2. the algorithm takes in the state vector, along with coefficients of the ideal path
+  3. the solve function returns delta and alpha for the future times.
+
+  * Timestep Length and Elapsed Duration
+  1. I chose N = 8 and dt = 0.05.
+  2. Previously, I tried dt = 0.01. With dt = 0.01, N has to be greater 10 considering 100ms latency. So If we try N = 25 with dt = 0.01, the predicted path too short. 
+
+  * Polynomial Fitting and MPC Preprocessing
+  1. I change all the data (waypoints and angles) into vehicle coordinates.
+  2. After fitting the waypoints to 3-degree polynomial functions, I compute the radius of curvature that will set the ideal velocity for the next iteration.
+  
+  * Model Predictive Control with Latency
+  Instead of choosing the first (steering angle, throttle) within an array of predictions, we choose the __nth__ such value such that __n__ * __dt__ = 100ms. 
 
 ---
 
