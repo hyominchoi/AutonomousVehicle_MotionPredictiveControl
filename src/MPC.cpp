@@ -228,7 +228,11 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
   constraints_upperbound[epsi_start] = epsi;
   
   //Compute radius of curvature at the next point
-  double x_curvature = 10;
+  double x_curvature = 10.;
+  if (ref_v == 40) x_curvature = 20;
+  else if (ref_v == 30) x_curvature = 15;
+  else x_curvature = 10;
+  
   double numerator = (coeffs[1] + 2 * coeffs[2] * x_curvature + 3 * coeffs[3] * x_curvature * x_curvature);
   numerator = numerator * numerator;
   numerator += 1;
@@ -238,11 +242,9 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
   if (abs(r_k) < 70) {
     this->ref_v = 20;
   }
-  
   else if (abs(r_k) < 100) {
     this->ref_v = 30;
   }
-  
   else this->ref_v = 40;
   cout << "r_k" << r_k << "ref_v " << ref_v << "coeffs"<<
   coeffs[0] << " " << coeffs[1] <<" "<< coeffs[2] << " "<< coeffs[3] << endl ;
